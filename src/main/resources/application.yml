@@ -1,0 +1,57 @@
+server:
+  port: 8080
+
+
+spring:
+  application:
+    name: wallet
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${POSTGRES_JDBC_URL:}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 400
+      minimum-idle: 10
+      idle-timeout: 30000
+      max-lifetime: 180000
+      connection-timeout: 10000
+      pool-name: WalletHikariPool
+      register-mbeans: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    generate-ddl: false
+    show-sql: true
+  liquibase:
+    enabled: true
+    default-schema: public
+    change-log: classpath:db/changelog/db.changelog-master.yml
+  data:
+    redis:
+      ##host: redis
+      host: localhost
+      port: 6379
+      password: admin
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    enable:
+      all: true
+    tags:
+      application: wallet
+
+logging:
+  level:
+    org.springframework.cache: DEBUG
+    org.springframework.data.redis.core.RedisTemplate: DEBUG
+    org.springframework.data.redis.cache.RedisCacheManager: DEBUG

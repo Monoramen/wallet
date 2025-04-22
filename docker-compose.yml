@@ -1,0 +1,79 @@
+services:
+  backend:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./.env
+    networks:
+      - wallet-network
+    depends_on:
+      - database
+      - redis
+
+
+  database:
+    image: postgres
+    ports:
+      - "5001:5432"
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-wallet:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+    networks:
+      - wallet-network
+
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - wallet-network
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - wallet-network
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - redis-logs:/var/log/redis
+    command: ["sh", "-c", "mkdir -p /var/log/redis && redis-server /usr/local/etc/redis/redis.conf"]
+    networks:
+      - wallet-network
+volumes:
+  postgres-wallet:
+    name: postgres-wallet
+  grafana-storage:
+    name: grafana-storage
+  redis-logs:
+    name: redis-logs
+networks:
+  wallet-network:
+    name: wallet-network
+
+
