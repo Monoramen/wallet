@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mono.wallet.api.dto.WalletResponseDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -13,7 +14,9 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
@@ -22,10 +25,11 @@ import java.time.Duration;
 @EnableCaching
 @ConfigurationProperties(prefix = "spring.data.redis")
 public class RedisConfig {
+    @Autowired
+    private ObjectMapper objectMapper;
     private static final Logger log = LoggerFactory.getLogger(RedisConfig.class);
     private String host;
     private int port;
-    private String password;
 
     public String getHost() {
         return host;
@@ -43,20 +47,13 @@ public class RedisConfig {
         this.port = port;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
 
     @Bean
     public JedisConnectionFactory jedisConnectionFactory() {
         JedisConnectionFactory jedisConnectionFactory = new JedisConnectionFactory();
         jedisConnectionFactory.setHostName(host);
         jedisConnectionFactory.setPort(port);
-        jedisConnectionFactory.setPassword(password != null ? password : "");
+
 
         try {
             jedisConnectionFactory.afterPropertiesSet();
@@ -74,26 +71,37 @@ public class RedisConfig {
         RedisTemplate<String, WalletResponseDTO> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(jedisConnectionFactory());
 
+        Jackson2JsonRedisSerializer<WalletResponseDTO> serializer = new Jackson2JsonRedisSerializer<>(WalletResponseDTO.class);
+        serializer.setObjectMapper(objectMapper);
+
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-
-        Jackson2JsonRedisSerializer<WalletResponseDTO> serializer =
-                new Jackson2JsonRedisSerializer<>(WalletResponseDTO.class);
         redisTemplate.setValueSerializer(serializer);
-
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashValueSerializer(serializer);
 
         return redisTemplate;
     }
 
+
+
     @Bean
     public CacheManager cacheManager(JedisConnectionFactory jedisConnectionFactory) {
+        Jackson2JsonRedisSerializer<WalletResponseDTO> serializer =
+                new Jackson2JsonRedisSerializer<>(WalletResponseDTO.class);
+
+        serializer.setObjectMapper(objectMapper);
+
         RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
-                .disableCachingNullValues();
+                .disableCachingNullValues()
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(serializer)
+                );
 
         return RedisCacheManager.builder(jedisConnectionFactory)
                 .cacheDefaults(cacheConfiguration)
                 .build();
     }
+
+
 }

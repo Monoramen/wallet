@@ -2,6 +2,7 @@ package com.mono.wallet.db.entity;
 
 import com.mono.wallet.enums.OperationType;
 import jakarta.persistence.*;
+import org.springframework.data.redis.core.RedisHash;
 
 import java.math.BigDecimal;
 import java.util.UUID;

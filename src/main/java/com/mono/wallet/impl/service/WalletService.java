@@ -8,6 +8,7 @@ import com.mono.wallet.db.repository.WalletRepository;
 import com.mono.wallet.enums.OperationType;
 import com.mono.wallet.impl.mapper.WalletMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +49,7 @@ public class WalletService {
         return walletMapper.toResponse(wallet);
     }
 
-
+    @Cacheable(value = "wallets", key = "#walletId")
     public WalletResponseDTO findByWalletId(UUID walletId) {
         var wallet = walletRepository.findById(walletId).orElseThrow(() -> new ApiException(
                 ApiErrorType.NOT_FOUND, "Wallet not found"
