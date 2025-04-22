@@ -37,7 +37,7 @@ class WalletServiceTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);  // Инициализация моков
+        MockitoAnnotations.openMocks(this);
 
         walletId = UUID.randomUUID();
         walletRequestDTO = new WalletRequestDTO(walletId, OperationType.DEPOSIT, BigDecimal.valueOf(10));

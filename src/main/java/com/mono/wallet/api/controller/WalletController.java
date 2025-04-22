@@ -14,9 +14,10 @@ import java.util.UUID;
 @RequestMapping("/api/v1/wallet")
 public class WalletController {
 
-    @Autowired
+
     private final WalletService walletService;
 
+    @Autowired
     public WalletController(WalletService walletService) {
         this.walletService = walletService;
     }

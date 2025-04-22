@@ -17,15 +17,14 @@ public record WalletRequestDTO(
         @JsonProperty("walletId")
         UUID walletId,
 
-        @NotNull
         @JsonProperty("operationType")
         @NotNull(message = "Operation type cannot be null")
         OperationType operationType,
 
+        @JsonProperty("amount")
         @NotNull(message = "Amount cannot be null")
         @DecimalMin(value = "0.0", inclusive = false, message = "Amount must be positive")
         BigDecimal amount
-
 
 ) {
 }

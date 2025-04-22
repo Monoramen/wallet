@@ -2,6 +2,7 @@ package com.mono.wallet.db.repository;
 
 import com.mono.wallet.db.entity.WalletEntity;
 import com.mono.wallet.enums.OperationType;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -37,7 +38,6 @@ class WalletRepositoryTest {
 
     @Test
     void testFindByWalletIdSuccess() {
-        // Arrange
         UUID walletId = UUID.randomUUID();
         WalletEntity wallet = new WalletEntity();
         wallet.setWalletId(walletId);
@@ -47,11 +47,8 @@ class WalletRepositoryTest {
         log.info("Saving wallet with ID: {}", walletId);
         walletRepository.save(wallet);
 
-        // Act
         log.info("Searching for wallet with ID: {}", walletId);
         Optional<WalletEntity> foundWallet = walletRepository.findByWalletId(walletId);
-
-        // Compare the fields inside the Optional
         WalletEntity foundEntity = foundWallet.get();
         assertEquals(walletId, foundEntity.getWalletId(), "Wallet ID should match");
         assertEquals(BigDecimal.valueOf(100.00), foundEntity.getBalance(), "Balance should match");
@@ -60,14 +57,11 @@ class WalletRepositoryTest {
 
     @Test
     void testFindByWalletIdNotFound() {
-        // Arrange
         UUID walletId = UUID.randomUUID();
         log.info("Searching for a non-existing wallet with ID: {}", walletId);
 
-        // Act
         Optional<WalletEntity> foundWallet = walletRepository.findByWalletId(walletId);
 
-        // Assert
         assertFalse(foundWallet.isPresent(), "Wallet should not be found");
     }
 }

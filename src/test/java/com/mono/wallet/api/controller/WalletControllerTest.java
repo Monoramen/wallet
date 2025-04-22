@@ -4,17 +4,19 @@ import com.mono.wallet.api.dto.WalletRequestDTO;
 import com.mono.wallet.api.dto.WalletResponseDTO;
 import com.mono.wallet.api.exception.ApiErrorType;
 import com.mono.wallet.api.exception.ApiException;
-import com.mono.wallet.db.entity.WalletEntity;
+import com.mono.wallet.api.exception.ExceptionHandlerController;
 import com.mono.wallet.enums.OperationType;
 import com.mono.wallet.impl.service.WalletService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.servlet.View;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -38,22 +40,22 @@ class WalletControllerTest {
     private UUID walletId;
     private WalletRequestDTO walletRequestDTO;
     private WalletResponseDTO walletResponseDTO;
-    private WalletRequestDTO insufficientFundsRequest;
-    private WalletRequestDTO notFoundRequest;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+
+        View mockView = Mockito.mock(View.class);
+        ExceptionHandlerController exceptionHandler = new ExceptionHandlerController(mockView);
+
+        mockMvc = MockMvcBuilders.standaloneSetup(walletController)
+                .setControllerAdvice(exceptionHandler)
+                .build();
         walletId = UUID.randomUUID();
 
         walletRequestDTO = new WalletRequestDTO(walletId, OperationType.DEPOSIT, BigDecimal.TEN);
         walletResponseDTO = new WalletResponseDTO(walletId, OperationType.DEPOSIT, BigDecimal.TEN);
 
-
-        insufficientFundsRequest = new WalletRequestDTO(walletId, OperationType.WITHDRAW, BigDecimal.valueOf(1000));
-        notFoundRequest = new WalletRequestDTO(UUID.randomUUID(), OperationType.DEPOSIT, BigDecimal.TEN);
-
-        mockMvc = MockMvcBuilders.standaloneSetup(walletController).build();
     }
 
     @Test
@@ -76,7 +78,7 @@ class WalletControllerTest {
 
         mockMvc.perform(get("/api/v1/wallet/{walletId}", walletId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.walletId").value(walletId.toString())) // Проверка walletId
+                .andExpect(jsonPath("$.walletId").value(walletId.toString()))
                 .andExpect(jsonPath("$.balance").value(10));
 
     }
@@ -84,15 +86,15 @@ class WalletControllerTest {
     @Test
     void shouldReturnBadRequestForInvalidUUID() throws Exception {
         List<String> invalidUUIDs = List.of(
-                "invalid-uuid",         // не UUID формат
-                "a6f8a0c1-5f03-470e",    // слишком короткий
-                "a6f8a0c1-5f03-470e-9bfa-8e7b3aaf98c22" // слишком длинный
+                "invalid-uuid",
+                "a6f8a0c1-5f03-470e",
+                "a6f8a0c1-5f03-470e-9bfa-8e7b3aaf98c22"
         );
 
         for (String invalidUUID : invalidUUIDs) {
             mockMvc.perform(get("/api/v1/wallet/{walletId}", invalidUUID))
                     .andExpect(status().isBadRequest())
-                    .andExpect(content().string("")); // Проверяем что тело ответа пустое
+                    .andExpect(content().string(""));
         }
     }
 
@@ -105,29 +107,48 @@ class WalletControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-
     @Test
     void shouldReturnBadRequestWhenInsufficientFunds() throws Exception {
 
         UUID walletId = UUID.randomUUID();
-        BigDecimal withdrawalAmount = BigDecimal.valueOf(500);
+        BigDecimal withdrawalAmount = BigDecimal.valueOf(1000);
+
         WalletRequestDTO walletRequestDTO = new WalletRequestDTO(walletId, OperationType.WITHDRAW, withdrawalAmount);
 
-        // Создаем мок для кошелька с нулевым балансом
-        WalletEntity wallet = new WalletEntity(walletId, OperationType.WITHDRAW, BigDecimal.ZERO);
-
-        // Мокаем метод, чтобы выбросить исключение ApiException
         when(walletService.changeBalance(walletRequestDTO)).thenThrow(new ApiException(ApiErrorType.BAD_REQUEST, "Insufficient funds"));
 
-        // Выполняем запрос
         mockMvc.perform(post("/api/v1/wallet")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"walletId\":\"" + walletId + "\", \"operationType\":\"WITHDRAW\", \"amount\":500}"))
+                        .content("{\"walletId\":\"" + walletId + "\", \"operationType\":\"WITHDRAW\", \"amount\":1000}"))
                 .andExpect(status().isBadRequest())  // Ожидаем статус 400
-                .andExpect(jsonPath("$.message").value("Insufficient funds"))  // Ожидаем сообщение об ошибке
-                .andExpect(jsonPath("$.status").value(400));  // Проверка статуса ошибки
+                .andExpect(jsonPath("$.message").value("Insufficient funds"))
+                .andExpect(jsonPath("$.statusCode").value(400));
     }
 
+    @Test
+    void shouldReturnBadRequestForInvalidUUIDFormat() throws Exception {
+        mockMvc.perform(post("/api/v1/wallet")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"walletId\":\"invalid-uuid\", \"operationType\":\"DEPOSIT\", \"amount\":10}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid UUID format"))
+                .andExpect(jsonPath("$.description").value("Please use standard 36-character UUID format"));;
+    }
 
+    @Test
+    void shouldReturnBadRequestForInvalidOperationTypeFormat() throws Exception {
+        mockMvc.perform(post("/api/v1/wallet")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"walletId\":\"" + walletId + "\", \"operationType\":\"INVALID\", \"amount\":10}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid operation type: 'INVALID'"))
+                .andExpect(jsonPath("$.description").value("Allowed values: [DEPOSIT, WITHDRAW]"));
+    }
 
+    @Test
+    void testUnrecognizedField() throws Exception {
+        mockMvc.perform(post("/api/v1/wallet")
+                        .content("{\"wallet_id\":\"...\", \"operation_type\":\"DEPOSIT\", \"invalid\":10}"))
+                .andExpect(status().is4xxClientError());
+    }
 }
