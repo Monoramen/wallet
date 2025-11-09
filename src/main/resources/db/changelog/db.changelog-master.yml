@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - include:
+      file: create-wallet-table.yml
+      relativeToChangelogFile: true
+
+  - changeSet:
+      id: insert-initial-wallets
+      author: monoramen
+      runOnChange: true
+      preConditions:
+        - onFail: MARK_RAN
+          and:
+            - tableExists:
+                tableName: wallet
+            - sqlCheck:
+                sql: "SELECT COUNT(*) FROM wallet"
+                expectedResult: "0"
+      changes:
+        - sqlFile:
+            path: sql/init.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: true

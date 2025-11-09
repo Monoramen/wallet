@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: wallet
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${POSTGRES_JDBC_URL:}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 50
+      connection-timeout: 10000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate.connection.isolation: 2
+      hibernate.jdbc.timeout: 2
+      jakarta.persistence.lock.timeout: 2000
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 40
+          order_updates: true
+          order_inserts: true
+          batch_versioned_data: true
+    generate-ddl: false
+    show-sql: false
+  liquibase:
+    enabled: true
+    default-schema: public
+    change-log: classpath:db/changelog/db.changelog-master.yml

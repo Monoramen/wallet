@@ -1,0 +1,6 @@
+## 2000rps
+docker run --rm williamyeh/wrk -t48 -c800 -d120s http://host.docker.internal:8080/api/v1/wallet/a6f8a0c1-5f03-470e-9bfa-8e7b3aaf98c2
+
+
+## 1400rps
+docker run --rm -v "$(pwd)/target-wallet-test.lua:/target-wallet-test.lua" --network host williamyeh/wrk -t20 -c100 -d30s --latency -s /target-wallet-test.lua http://host.docker.internal:8080

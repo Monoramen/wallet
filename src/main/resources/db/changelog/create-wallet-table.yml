@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-create-wallet-table
+      author: Monoramen
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: wallet
+      changes:
+        - createTable:
+            tableName: wallet
+            columns:
+              - column:
+                  name: wallet_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+              - column:
+                  name: operation_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance
+                  type: NUMERIC(19, 4)
+                  defaultValueNumeric: 0.0000
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
